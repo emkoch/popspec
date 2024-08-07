@@ -166,7 +166,8 @@ def stab_corr_neut(yy, SS, zero_prob):
     double_prob = poly_prob(yy, 4*SS)
     single_prob = poly_prob(yy, SS)
     result = (1-zero_prob) * burd * (double_prob - neut_prob) 
-    result /= zero_prob * (single_prob*neut_prob + (neut_burd + burd) * single_prob) + (1-zero_prob) * (single_prob**2 + burd * (double_prob + neut_prob))
+    result /= (zero_prob * (single_prob*neut_prob + (neut_burd + burd) * single_prob) +
+                (1-zero_prob) * (single_prob**2 + burd * (double_prob + neut_prob)))
     return result
 
 def stab_corr_num(yy, SS):
@@ -435,92 +436,65 @@ def F_inv_Sp(xx, nn, S1):
 # vectorize the function
 F_inv_Sp_vec = np.vectorize(F_inv_Sp)
 
-def Sp_sample(nn, S1, n=1000):
+def sample_cos_alpha(nn, size):
+    """
+    Sample the cosine between the two random angles in n-dimensions
+
+    nn:   number of dimensions
+    size: size of the array to sample
+    """
+    if nn == 1:
+        return np.random.choice([-1, 1], size=size)
+    elif nn > 1:
+        return 2 * np.random.beta((nn-1)/2, (nn-1)/2, size=size) - 1
+    elif nn < 1:
+        return np.zeros(size)
+    else:
+        return None
+
+def Sp_sample(nn, S1, size=1000):
     """
     Sample from the Sp distribution using the CDF F_Sp and the inverse transform sampling method.
     """
-    UU = np.random.uniform(size=n)
+    UU = np.random.uniform(size=size)
     return F_inv_Sp_vec(UU, nn, S1)
 
 def Sp_sample_hap(nn, S1, n=1000):
-    """
-    Sample from the Sp distribution using the CDF F_Sp and the inverse transform sampling method.
-    """
     S1i = Sp_sample(nn, S1, n) - S1
     S1j = Sp_sample(nn, S1, n) - S1
-    UU = np.random.uniform(size=n)
-    if nn > 2:
-        return S1i + S1j + 2*np.sqrt(S1i*S1j)*np.cos(np.pi * UU)
-    else:
-        # multiply by -1/+1 with equal probability in case of nn=2
-        return S1i + S1j + 2*np.sqrt(S1i*S1j)*np.random.choice([-1, 1], size=n)
-    
-def Sp_sample_xi(nn, S1, burden_set, poly_prob_set, sigma_set, n=1000):
-    """
-    Sample from the Sp distribution using the CDF F_Sp and the inverse transform sampling method.
-    """
+    cos_alpha = sample_cos_alpha(nn-1)
+    return S1i + S1j + 2 * np.sqrt(S1i + S1j) * cos_alpha
+
+def Sp_sample_samps(nn, S1, burden_set, poly_prob_set, sigma_set, size=1000):
 
     SS_set = np.logspace(np.log10(S1), 8, 100000)
     F_Sp_set = F_Sp(SS_set, nn, S1)
     F_Sp_set[0] = 0
     
-    S1i = np.interp(np.random.uniform(size=n), F_Sp_set, SS_set) - S1
-    S1j = np.interp(np.random.uniform(size=n), F_Sp_set, SS_set) - S1
+    Spi = np.interp(np.random.uniform(size=n), F_Sp_set, SS_set) - S1
+    Spj = np.interp(np.random.uniform(size=n), F_Sp_set, SS_set) - S1
 
-    burden_i = np.interp(S1i + S1, sigma_set, burden_set)
-    burden_j = np.interp(S1j + S1, sigma_set, burden_set)
+    # Calculate avg allele burden for sampled S values
+    burden_i = np.interp(Spi + S1, sigma_set, burden_set)
+    burden_j = np.interp(Spj + S1, sigma_set, burden_set)
 
-    if nn > 2:
-        UU = np.random.uniform(size=n)
-        double_concordant =  S1i + S1j + 2*np.sqrt(S1i*S1j)*np.cos(np.pi * UU) + 4*S1
-        double_discordant =  S1i + S1j + 2*np.sqrt(S1i*S1j)*np.cos(np.pi * UU)
-    else:
-        # multiply by -1/+1 with equal probability in case of nn=2
-        UU = np.random.choice([-1, 1], size=n)
-        double_concordant = S1i + S1j + 2*np.sqrt(S1i*S1j)*UU + 4*S1
-        double_discordant = S1i + S1j + 2*np.sqrt(S1i*S1j)*UU
+    # Sample the cos angle between the two pleiotropic effects
+    cos_alpha = sample_cos_alpha(nn-1, size)
 
+    # Compute approximate selection coefficients for double mutant haplotypes
+    double_concordant =  Spi + Spj + 2*np.sqrt(Spi*Spj)*cos_alpha + 4*S1
+    double_discordant =  Spi + Spj + 2*np.sqrt(Spi*Spj)*cos_alpha
 
-    poly_probs_concordant = np.interp(double_concordant, sigma_set, poly_prob_set)
-    poly_probs_discordant = np.interp(double_discordant, sigma_set, poly_prob_set)
-
-    min_samp = np.argmin((burden_i + burden_j) * (poly_probs_concordant - poly_probs_discordant))
-
-    return (np.nansum((burden_i + burden_j) * (poly_probs_concordant - poly_probs_discordant)) / 
-            np.nansum((burden_i + burden_j) * (poly_probs_concordant + poly_probs_discordant)))
-
-
-def Sp_sample_samps(nn, S1, burden_set, poly_prob_set, sigma_set, n=1000):
-    """
-    Sample from the Sp distribution using the CDF F_Sp and the inverse transform sampling method.
-    """
-
-    SS_set = np.logspace(np.log10(S1), 8, 100000)
-    F_Sp_set = F_Sp(SS_set, nn, S1)
-    F_Sp_set[0] = 0
-    
-    S1i = np.interp(np.random.uniform(size=n), F_Sp_set, SS_set) - S1
-    S1j = np.interp(np.random.uniform(size=n), F_Sp_set, SS_set) - S1
-
-    burden_i = np.interp(S1i + S1, sigma_set, burden_set)
-    burden_j = np.interp(S1j + S1, sigma_set, burden_set)
-
-    if nn > 2:
-        UU = np.random.uniform(size=n)
-        double_concordant =  S1i + S1j + 2*np.sqrt(S1i*S1j)*np.cos(np.pi * UU) + 4*S1
-        double_discordant =  S1i + S1j + 2*np.sqrt(S1i*S1j)*np.cos(np.pi * UU)
-    else:
-        # multiply by -1/+1 with equal probability in case of nn=2
-        UU = np.random.choice([-1, 1], size=n)
-        double_concordant = S1i + S1j + 2*np.sqrt(S1i*S1j)*UU + 4*S1
-        double_discordant = S1i + S1j + 2*np.sqrt(S1i*S1j)*UU
-
-
+    # Compute polymorphism probabilities for the double mutants
     poly_probs_concordant = np.interp(double_concordant, sigma_set, poly_prob_set)
     poly_probs_discordant = np.interp(double_discordant, sigma_set, poly_prob_set)
 
     return (burden_i + burden_j) * (poly_probs_concordant - poly_probs_discordant), \
            (burden_i + burden_j) * (poly_probs_concordant + poly_probs_discordant)
+
+def Sp_sample_xi(nn, S1, burden_set, poly_prob_set, sigma_set, size=1000):
+    num, denom = Sp_sample_samps(nn, S1, burden_set, poly_prob_set, sigma_set, size)
+    return np.nansum(num) / np.nansum(denom)
 
 def dfe_integrate(num_set, denom_set, S1_set, f_S1):
     def numerator(S1):
@@ -532,6 +506,21 @@ def dfe_integrate(num_set, denom_set, S1_set, f_S1):
     denom_int = quad(denominator, 0, np.infty, limit=1000)[0]
     return num_int / denom_int
 
+def vmf_sample(nn, kappa, SS, poly_prob_set, sigma_set, size):
+    # Sample first vectors from uniform distribution on the sphere (size x nn)
+    u1 = stats.uniform_direction(nn).rvs(size)
+    # Sample the angle from the von Mises-Fisher distribution (size x nn)
+    u2 = np.zeros((size, nn))
+    for i in range(size):
+        u2[i] = stats.vonmises_fisher(u1[i], kappa).rvs()
+    # burden_S = ex_burden(SS)
+    weight = np.abs(u1[:,0]) + np.abs(u2[:,0])
+    S_concordant = SS * np.sum((u1 + u2)**2, axis=1)
+    S_discordant = SS * np.sum((u1 - u2)**2, axis=1)
+    poly_probs_concordant = np.interp(S_concordant, sigma_set, poly_prob_set)
+    poly_probs_discordant = np.interp(S_discordant, sigma_set, poly_prob_set)
+
+    return weight, poly_probs_concordant, poly_probs_discordant
 
 ### PLOTTING FUNCTIONS ###
 ##########################
