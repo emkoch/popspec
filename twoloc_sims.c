@@ -29,10 +29,15 @@ void simulate_population(unsigned int N,
     int run = 0;
     double w_sing = exp(-pow(beta_1, 2));
     double w_doub = exp(-pow(beta_1 + beta_2, 2));
-    double probs[4] = {1.0, 0.0, 0.0, 0.0};
+    double ww[4] = {0.0, 0.0, 0.0, 0.0};    // Fitnesses of haplotypes
+    double probs[4] = {1.0, 0.0, 0.0, 0.0}; // Probabilities of haplotypes in next generation
+    double deviation = 0.0;
     double total = 0.0;
-    double mu = theta / N;
+    double mu = theta / (2 * N); // theta = 2*Ne*mu in a haploid population
+    // double mu = theta / N;
 
+    // Set up the RNG
+    // TODO: give these better names
     const gsl_rng_type * T;
     gsl_rng * r;
 
@@ -42,10 +47,21 @@ void simulate_population(unsigned int N,
     r = gsl_rng_alloc(T);
 
     while (run < run_mult * N) {
-        // If population is monomorphic for derived allele
-        if (pop[1] + pop[3] == N || pop[2] + pop[3] == N) {
-            pop[0] = N;
+        // HAPLOTYPE VECTOR:
+        // pop[0]: 0,0
+        // pop[1]: 1,0
+        // pop[2]: 0,1
+        // pop[3]: 1,1
+
+        // If population is monomorphic for a derived allele
+        if (pop[1] + pop[3] == N) {
+            pop[0] = N - pop[3];
             pop[1] = 0;
+            pop[2] = pop[3];
+            pop[3] = 0;
+        } else if (pop[2] + pop[3] == N) {
+            pop[0] = N - pop[3];
+            pop[1] = pop[3];
             pop[2] = 0;
             pop[3] = 0;
         }
@@ -62,24 +78,30 @@ void simulate_population(unsigned int N,
             }
 
             // Sample a geometrically distributed number of generations before that mutation occurred
-            int gens_to_mut = 1 + gsl_ran_geometric(r, theta);
-//            printf("steps: %d", gens_to_mut);
-            if ((run_mult * N - run) < gens_to_mut) {
+            int gens_to_mut = gsl_ran_geometric(r, theta); // Why did we have 1 + gsl_ran... here?
+            if ((run_mult * N - run) < gens_to_mut) {      // geometric dist in gsl starts support at k=1
                 pop[0] = N;
                 pop[1] = 0;
                 pop[2] = 0;
                 pop[3] = 0;
                 break;
+                // end and output a monomorphic population if we wait too many generations for a mutation
             }
             run += gens_to_mut;
         } else {
             run += 1;
         }
 
-        probs[0] = pop[0] - mu * pop[0] + rho * (pop[1] * pop[2] - pop[0] * pop[3]);
-        probs[1] = w_sing * (pop[1] + mu * pop[0] + rho * (pop[0] * pop[3] - pop[1] * pop[2]));
-        probs[2] = w_sing * (pop[2] + mu * pop[0] + rho * (pop[0] * pop[3] - pop[1] * pop[2]));
-        probs[3] = w_doub * (pop[3] + mu * (pop[1] + pop[2]) + rho * (pop[1] * pop[2] - pop[0] * pop[3]));
+        deviation = (beta_1 * (pop[1] + pop[3]) + beta_2 * (pop[2] + pop[3])) / N;
+        ww[0] = 1 - pow(deviation, 2);
+        ww[1] = 1 - pow(beta_1 - deviation, 2);
+        ww[2] = 1 - pow(beta_2 - deviation, 2);
+        ww[3] = 1 - pow(beta_1 + beta_2 - deviation, 2);
+
+        probs[0] = ww[0] * (pop[0] - mu * pop[0] + rho * (pop[1] * pop[2] - pop[0] * pop[3]));
+        probs[1] = ww[1] * (pop[1] + mu * pop[0] + rho * (pop[0] * pop[3] - pop[1] * pop[2]));
+        probs[2] = ww[2] * (pop[2] + mu * pop[0] + rho * (pop[0] * pop[3] - pop[1] * pop[2]));
+        probs[3] = ww[3] * (pop[3] + mu * (pop[1] + pop[2]) + rho * (pop[1] * pop[2] - pop[0] * pop[3]));
 
         // Normalize probabilities
         total = probs[0] + probs[1] + probs[2] + probs[3];
@@ -113,11 +135,8 @@ void sim_batch(int N_sims,
 
     srand(time(NULL));
 
-    for (int i = 0; i < N_sims; ++i) {
-//        printf("Simulation %d \n", i);
-        
+    for (int i = 0; i < N_sims; ++i) {        
         // Randomly choose beta values
-//        printf(" eff size float, %f", eff_size_float);
         beta_1 = eff_size_float * random_choice(symm_param);
         beta_2 = eff_size_float * random_choice(symm_param);
         beta_arr[i][0] = beta_1;
