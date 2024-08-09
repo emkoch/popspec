@@ -6,10 +6,15 @@
 #SBATCH -o outs/myoutput_%j.out  # File to which STDOUT will be written, %j inserts jobid
 #SBATCH -e errs/myerrors_%j.err  # File to which STDERR will be written, %j inserts jobid
 
+
+## This runscript generates simulations with selection but a single beta value. It 
+# also uses the finer grained set of beta values
+
 module load gcc/9.2.0
 module load gsl/2.7.1
 
-readarray beta_arr < betas.txt
+# readarray beta_arr < betas.txt
+beta_arr=(0.0021084825171429115 0.0023796935021347483)
 arr_len=${#beta_arr[@]}
 
 for ((i=0; i<$arr_len; i++)); 
