@@ -129,6 +129,13 @@ def stab_corr_posLD(yy, SS):
     double_prob = poly_prob(yy, 4*SS)
     return burd * (double_prob - neut_prob) / (burd * (double_prob + neut_prob)) if burd * (double_prob + neut_prob) > 0 else 1
 
+def stab_corr_posLD_poly(yy, SS):
+    def ex_diff(xx):
+        return xx * (poly_prob(yy, (2*np.sqrt(SS)-xx*np.sqrt(SS))**2 ) - poly_prob(yy, xx**2*SS)) * sfs_ud_params_sigma(xx, 1, SS)
+    def ex_sum(xx):
+        return xx * (poly_prob(yy, (2*np.sqrt(SS)-xx*np.sqrt(SS))**2 ) + poly_prob(yy, xx**2*SS)) * sfs_ud_params_sigma(xx, 1, SS)
+    return spi.quad(ex_diff, 0, 1)[0] / spi.quad(ex_sum, 0, 1)[0]
+    
 def stab_corr_posLD_neut(yy, SS, zero_prob):
     """
     Calculate the correlation between beta_i and beta_j for a given MAF and
