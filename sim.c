@@ -45,7 +45,7 @@ void singleGeneration(int N, double beta_1, double beta_2, double rec_val, doubl
 
     } else {
         // This is for the standard quadratic fitness function
-        probs[0] = pop[0] - mu * pop[0] + rec_valr * (pop[1] * pop[2] - pop[0] * pop[3]);
+        probs[0] = pop[0] - mu * pop[0] + rec_val * (pop[1] * pop[2] - pop[0] * pop[3]);
         probs[1] = w_sing_1 * (pop[1] + mu * pop[0] + rec_val * (pop[0] * pop[3] - pop[1] * pop[2]));
         probs[2] = w_sing_2 * (pop[2] + mu * pop[0] + rec_val * (pop[0] * pop[3] - pop[1] * pop[2]));
         probs[3] = w_doub * (pop[3] + mu * (pop[1] + pop[2]) + rec_val * (pop[1] * pop[2] - pop[0] * pop[3]));
@@ -120,11 +120,11 @@ void simulate_population(unsigned int N,
     double total = 0.0;
     double mu = theta / (2 * N); // theta = 2*Ne*mu in a haploid population
     double rec_val = rho / (N * N);
+    int n = 0;
+    int *population = NULL;
 
     // Read in the population
     if (demography == 1){
-        int n = 0;
-        int *population = NULL;
         population = read_integers_from_file("demo_Ns.txt", &n);
     }
     ////
@@ -176,20 +176,22 @@ void simulate_population(unsigned int N,
     if (demography == 1){
         // And now we simulate with the demography
         for (size_t i = 0; i < n; i++){
+            int diploid_pop = 2*population[i];
+
+            singleGeneration(diploid_pop, beta_1, beta_2, rec_val, mu, pop, underdominant, r);
+            
             // If population is monomorphic for a derived allele
-            if (pop[1] + pop[3] == population[i]) {
-                pop[0] = population[i] - pop[3];
+            if (pop[1] + pop[3] == diploid_pop) {
+                pop[0] = diploid_pop - pop[3];
                 pop[1] = 0;
                 pop[2] = pop[3];
                 pop[3] = 0;
-            } else if (pop[2] + pop[3] == population[i]) {
-                pop[0] = population[i] - pop[3];
+            } else if (pop[2] + pop[3] == diploid_pop) {
+                pop[0] = diploid_pop - pop[3];
                 pop[1] = pop[3];
                 pop[2] = 0;
                 pop[3] = 0;
             }
-
-        singleGeneration(population[i], beta_1, beta_2, rec_val, mu, pop, underdominant, r);
         }
     }
     /////
@@ -258,7 +260,7 @@ int main(int argc, char *argv[]) {
     double symm_param = atof(argv[8]);
     double slurm_seed = atof(argv[9]);
     int underdominant = atoi(argv[10]);
-    int demography = atoi(argv[11])
+    int demography = atoi(argv[11]);
 
     fprintf(stderr, "starting\n");
 
