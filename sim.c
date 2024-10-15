@@ -20,7 +20,7 @@ int random_choice(double probability) {
     return ((double)rand() / RAND_MAX) < probability ? 1 : -1;
 }
 
-void singleGeneration(int N, double beta_1, double beta_2, double rec_val, double mu, unsigned int *pop, int underdominant, gsl_rng * r){
+void singleGeneration(int N, double beta_1, double beta_2, double r_prob, double mu, unsigned int *pop, int underdominant, gsl_rng * r){
     double ww[4] = {0.0, 0.0, 0.0, 0.0};    // Fitnesses of haplotypes
     double probs[4] = {1.0, 0.0, 0.0, 0.0};
     double w_sing_1 = exp(-pow(beta_1, 2));
@@ -29,10 +29,12 @@ void singleGeneration(int N, double beta_1, double beta_2, double rec_val, doubl
     
     double deviation = 0.0;
     double total = 0.0;
+    int N_prev = pop[1] + pop[0] + pop[2] + pop[3];
+    double rec_val = r_prob/N_prev;
 
     if (underdominant == 1) {
         // This is where the underdominant fitness effect comes in
-        deviation = (beta_1 * (pop[1] + pop[3]) + beta_2 * (pop[2] + pop[3])) / N;
+        deviation = (beta_1 * (pop[1] + pop[3]) + beta_2 * (pop[2] + pop[3])) / N_prev;
         ww[0] = 1 - pow(deviation, 2);
         ww[1] = 1 - pow(beta_1 - deviation, 2);
         ww[2] = 1 - pow(beta_2 - deviation, 2);
@@ -119,7 +121,7 @@ void simulate_population(unsigned int N,
     double deviation = 0.0;
     double total = 0.0;
     double mu = theta / (2 * N); // theta = 2*Ne*mu in a haploid population
-    double rec_val = rho / (N * N);
+    double r_prob = rho / (2 * N);
     int n = 0;
     int *population = NULL;
 
@@ -169,7 +171,7 @@ void simulate_population(unsigned int N,
             run += 1;
         }
 
-        singleGeneration(N, beta_1, beta_2, rec_val, mu, pop, underdominant, r);
+        singleGeneration(N, beta_1, beta_2, r_prob, mu, pop, underdominant, r);
     }
 
     /////
@@ -178,7 +180,7 @@ void simulate_population(unsigned int N,
         for (size_t i = 0; i < n; i++){
             int diploid_pop = 2*population[i];
 
-            singleGeneration(diploid_pop, beta_1, beta_2, rec_val, mu, pop, underdominant, r);
+            singleGeneration(diploid_pop, beta_1, beta_2, r_prob, mu, pop, underdominant, r);
             
             // If population is monomorphic for a derived allele
             if (pop[1] + pop[3] == diploid_pop) {
