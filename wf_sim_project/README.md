@@ -20,8 +20,13 @@ Built for high-performance clusters (O2) with a user-friendly Python interface.
 
 ### Install
 ```bash
-git clone [https://github.com/yourusername/wf_sim_tools.git](https://github.com/yourusername/wf_sim_tools.git)
-cd wf_sim_tools
+# Clone the repository
+git clone [https://github.com/emkoch/popspec.git](https://github.com/emkoch/popspec.git)
+
+# Navigate to the project subdirectory
+cd popspec/wf_sim_project
+
+# Install in editable mode
 pip install -e .
 ```
 
