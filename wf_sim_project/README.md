@@ -1,6 +1,6 @@
 # WF-Sim-Tools: High-Performance Wright-Fisher Simulations
 
-A robust, C-accelerated Python package for simulating Wright-Fisher populations with recombination, selection (quadratic & underdominant), and complex demographies.
+A robust, C-accelerated Python package for simulating Wright-Fisher populations with recombination, selection (polygenic & underdominant), and complex demographies.
 
 Built for high-performance clusters (O2) with a user-friendly Python interface.
 
@@ -78,6 +78,6 @@ print(f"Mean Fixation: {df['N11'].mean()}")
 | `--beta2` | Selection coefficient for derived allele at locus 2 | `0.0` |
 | `--symmetry` | Probability that selection is positive (vs negative) | `0.5` |
 | `--seed` | Random seed offset | `123` |
-| `--polygenic` | Flag: Use underdominant selection (vs quadratic) | `False` |
+| `--polygenic` | Flag: Use polygenic selection (vs quadratic) | `False` |
 | `--demography-file` | Path to text file containing integer list of pop sizes | `None` |
 | `--output` / `-o` | Output file path (if ignored, prints to stdout) | `None` |
