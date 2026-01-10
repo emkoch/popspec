@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wf_sim_tools"
+version = "0.1.0"
+description = "A robust wrapper for Wright-Fisher simulations on O2"
+authors = [{name = "Shivam Gandhi, Evan Kock, Mikhail Moldovan", email = "shivamgandhi@fas.harvard.edu"}]
+requires-python = ">=3.8"
+dependencies = ["pandas"]  
+
+[project.scripts]
+# This creates the 'wf-sim' command in your terminal
+wf-sim = "wf_sim_tools.cli:main"
+
+[tool.setuptools.package-data]
+# Ensure the C files are included in the package
+wf_sim_tools = ["bin/*.c", "bin/Makefile"]

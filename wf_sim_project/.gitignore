@@ -1,0 +1,52 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.venv
+venv/
+ENV/
+
+# --- C / C++ ---
+# Ignore object files and compiled libraries
+*.o
+*.obj
+*.dylib
+*.dll
+*.so
+*.out
+
+# --- Specific Project Binaries ---
+# CRITICAL: Do not commit the compiled binary, only the source (sim.c)
+src/wf_sim_tools/bin/wf_sim
+
+# --- OS / IDE ---
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# --- Data & Results ---
+# Ignore simulation outputs to keep repo light
+*.csv
+*.tsv
+dataframes/
+results/
+output/
